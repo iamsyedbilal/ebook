@@ -3,6 +3,7 @@ import express, {
     type Request,
     type Response,
 } from 'express';
+import globalErrorHandler from './middlewares/globalErrorHandler.js';
 
 const app = express();
 
@@ -12,5 +13,8 @@ const app = express();
 app.get('/', function (req: Request, res: Response, next: NextFunction) {
     res.json({ message: 'Welcome to ebook api' });
 });
+
+// global error handler
+app.use(globalErrorHandler);
 
 export default app;
