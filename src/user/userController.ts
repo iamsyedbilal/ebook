@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import createHttpError from 'http-errors';
 import userModel from './userModel.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { config } from '../config/config.js';
 
 const createUser = async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
@@ -32,12 +34,20 @@ const createUser = async (req: Request, res: Response) => {
         password: hashedPassword,
     });
 
-    if (!newUser) {
+    const savedUser = await newUser.save();
+
+    if (!savedUser) {
         const error = createHttpError(500, 'Failed to create user');
         return res.status(error.statusCode).json({ error: error.message });
     }
 
-    res.json({ message: 'User created successfully' });
+    const accessToken = jwt.sign(
+        { userId: savedUser._id },
+        config.accessTokenSecret as string,
+        { expiresIn: '7d', algorithm: 'HS256' },
+    );
+
+    res.json({ message: 'User created successfully', accessToken });
 };
 
 export { createUser };
