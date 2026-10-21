@@ -6,6 +6,9 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';
 import asyncHandler from '../utils/asyncHandler.js';
 
+/**
+ * Create a new user
+ */
 const createUser = asyncHandler(async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
 
@@ -50,6 +53,10 @@ const createUser = asyncHandler(async (req: Request, res: Response) => {
 
     res.status(201).json({ message: 'User created successfully', accessToken });
 });
+
+/**
+ * Login user
+ */
 
 const loginUser = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
