@@ -7,6 +7,10 @@ import globalErrorHandler from './middlewares/globalErrorHandler.js';
 
 const app = express();
 
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.static('public'));
+
 // Routes
 
 // Http methods GET,POST,PUT,PATCH,DELETE
