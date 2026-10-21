@@ -14,6 +14,8 @@ app.get('/', function (req: Request, res: Response, next: NextFunction) {
     res.json({ message: 'Welcome to ebook api' });
 });
 
+app.use('/api/v1/users', (await import('./user/userRouter.js')).default);
+
 // global error handler
 app.use(globalErrorHandler);
 
