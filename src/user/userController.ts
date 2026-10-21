@@ -4,8 +4,9 @@ import userModel from './userModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';
+import asyncHandler from '../utils/asyncHandler.js';
 
-const createUser = async (req: Request, res: Response) => {
+const createUser = asyncHandler(async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
@@ -48,6 +49,6 @@ const createUser = async (req: Request, res: Response) => {
     );
 
     res.json({ message: 'User created successfully', accessToken });
-};
+});
 
 export { createUser };
