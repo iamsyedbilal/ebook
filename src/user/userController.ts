@@ -5,6 +5,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/config.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import { generateAuthTokens } from '../utils/tokenService.js';
+
+const COOKIE_OPTIONS = {
+    httpOnly: true, // Blocks XSS attacks by hiding the cookie from frontend JavaScript
+    secure: process.env.NODE_ENV === 'production', // Transmits only over HTTPS in production
+    sameSite: 'strict' as const, // Prevents CSRF attacks
+    maxAge: 7 * 24 * 60 * 60 * 1000, // Matches token duration (7 days in milliseconds)
+};
 
 /**
  * Create a new user
@@ -39,11 +47,9 @@ const createUser = asyncHandler(
             return next(createHttpError(500, 'Failed to create user'));
         }
 
-        const accessToken = jwt.sign(
-            { userId: savedUser._id },
-            config.accessTokenSecret as string,
-            { expiresIn: '7d', algorithm: 'HS256' },
-        );
+        const { accessToken, refreshToken } = generateAuthTokens(savedUser._id);
+
+        res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
 
         res.status(201).json({
             success: true,
@@ -78,14 +84,81 @@ const loginUser = asyncHandler(
             return next(createHttpError(401, 'Invalid email or password'));
         }
 
-        const accessToken = jwt.sign(
-            { userId: user._id },
-            config.accessTokenSecret as string,
-            { expiresIn: '7d', algorithm: 'HS256' },
-        );
+        const { accessToken, refreshToken } = generateAuthTokens(user._id);
+
+        res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS);
 
         res.status(200).json({ message: 'Login successful', accessToken });
     },
 );
 
-export { createUser, loginUser };
+/*
+    Logout user
+*/
+const logoutUser = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict' as const,
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Logged out successfully',
+        });
+    },
+);
+
+/**
+ * Refresh Access Token Rotation
+ */
+const refreshAccessToken = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction) => {
+        const { refreshToken } = req.cookies;
+
+        if (!refreshToken) {
+            return next(
+                createHttpError(
+                    401,
+                    'Access denied. No refresh token provided.',
+                ),
+            );
+        }
+
+        try {
+            const decoded = jwt.verify(
+                refreshToken,
+                config.refreshTokenSecret as string,
+            ) as { userId: string };
+
+            const user = await userModel.findById(decoded.userId);
+
+            if (!user) {
+                return next(
+                    createHttpError(401, 'User session no longer exists.'),
+                );
+            }
+
+            const newAccessToken = jwt.sign(
+                { userId: user._id },
+                config.accessTokenSecret as string,
+                { expiresIn: '15m', algorithm: 'HS256' },
+            );
+
+            res.status(200).json({
+                success: true,
+                accessToken: newAccessToken,
+            });
+        } catch (error) {
+            return next(
+                createHttpError(
+                    403,
+                    'Invalid or expired refresh token. Please login again.',
+                ),
+            );
+        }
+    },
+);
+
+export { createUser, loginUser, logoutUser, refreshAccessToken };

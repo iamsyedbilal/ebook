@@ -1,11 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
 import asyncHandler from '../utils/asyncHandler.js';
 import bookModel from './bookModel.js';
+import createHttpError from 'http-errors';
 
 /*
     GET ALL BOOKS
 */
-
 const getAllBooks = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {},
 );
