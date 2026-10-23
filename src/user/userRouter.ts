@@ -5,6 +5,7 @@ import {
     logoutUser,
     refreshAccessToken,
 } from './userController.js';
+import verifyJWT from '../middlewares/verifyJWT.js';
 
 const userRouter = express.Router();
 
@@ -12,8 +13,8 @@ userRouter.post('/register', createUser);
 
 userRouter.post('/login', loginUser);
 
-userRouter.post('/logout', logoutUser);
+userRouter.post('/logout', verifyJWT, logoutUser);
 
-userRouter.post('/refresh-token', refreshAccessToken);
+userRouter.post('/refresh-token', verifyJWT, refreshAccessToken);
 
 export default userRouter;

@@ -7,15 +7,17 @@ import {
     deleteBook,
 } from './bookController.js';
 const bookRouter = express.Router();
+import verifyJWT from '../middlewares/verifyJWT.js';
+import isAdmin from '../middlewares/isAdmin.js';
 
 bookRouter.get('/', getAllBooks);
 
-bookRouter.get('/:slug', getBookBySlug);
+bookRouter.get('/:slug', verifyJWT, getBookBySlug);
 
-bookRouter.post('/', createBook);
+bookRouter.post('/', verifyJWT, isAdmin('admin'), createBook);
 
-bookRouter.patch('/:slug', updateBook);
+bookRouter.patch('/:slug', verifyJWT, isAdmin('admin'), updateBook);
 
-bookRouter.delete('/:slug', deleteBook);
+bookRouter.delete('/:slug', verifyJWT, isAdmin('admin'), deleteBook);
 
 export default bookRouter;
