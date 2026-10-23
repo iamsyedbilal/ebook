@@ -11,16 +11,22 @@ const userSchema = new mongoose.Schema<User>(
             type: String,
             required: [true, 'Email is required'],
             unique: true,
+            lowercase: true,
             validate: {
-                validator: function (value: string) {
-                    // Simple email validation regex
-                    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-                },
+                validator: (value: string) =>
+                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+                message: 'Please provide a valid email address',
             },
         },
         password: {
             type: String,
             required: [true, 'Password is required'],
+            select: false,
+        },
+        role: {
+            type: String,
+            enum: ['user', 'admin'],
+            default: 'user',
         },
     },
     {
@@ -28,6 +34,6 @@ const userSchema = new mongoose.Schema<User>(
     },
 );
 
-const userModel = mongoose.model('User', userSchema);
+const userModel = mongoose.model<User>('User', userSchema);
 
 export default userModel;

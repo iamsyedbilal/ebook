@@ -19,6 +19,7 @@ app.get('/', function (req: Request, res: Response, next: NextFunction) {
 });
 
 app.use('/api/v1/users', (await import('./user/userRouter.js')).default);
+app.use('/api/v1/books', (await import('./book/bookRouter.js')).default);
 
 // global error handler
 app.use(globalErrorHandler);
