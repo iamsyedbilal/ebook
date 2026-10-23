@@ -1,7 +1,6 @@
 import type mongoose from 'mongoose';
 
 export interface Book {
-    _id: string;
     title: string;
     slug: string;
     description: string;

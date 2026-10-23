@@ -28,7 +28,7 @@ const getAllBooks = asyncHandler(
             );
         }
 
-        res.json({
+        res.status(200).json({
             books,
             totalBooks,
             totalPages,
@@ -43,7 +43,31 @@ const getAllBooks = asyncHandler(
     GET BOOK BY SLUG
 */
 const getBookBySlug = asyncHandler(
-    async (req: Request, res: Response, next: NextFunction) => {},
+    async (req: Request, res: Response, next: NextFunction) => {
+        const { slug } = req.params;
+
+        if (typeof slug !== 'string') {
+            return next(
+                createHttpError(
+                    404,
+                    'Book not found. Please check the slug and try again.',
+                ),
+            );
+        }
+
+        const book = await bookModel.findOne({ slug });
+
+        if (!book) {
+            return next(
+                createHttpError(
+                    404,
+                    'Book not found. Please check the slug and try again.',
+                ),
+            );
+        }
+
+        res.status(200).json(book);
+    },
 );
 
 /*
