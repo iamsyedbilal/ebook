@@ -9,22 +9,13 @@ import {
 const bookRouter = express.Router();
 import verifyJWT from '../middlewares/verifyJWT.js';
 import isAdmin from '../middlewares/isAdmin.js';
-import { upload } from '../middlewares/upload.js';
+import { uploadBookFiles } from '../middlewares/upload.js';
 
 bookRouter.get('/', getAllBooks);
 
 bookRouter.get('/:slug', verifyJWT, getBookBySlug);
 
-bookRouter.post(
-    '/',
-    verifyJWT,
-    isAdmin('admin'),
-    upload.fields([
-        { name: 'coverImage', maxCount: 1 },
-        { name: 'file', maxCount: 1 },
-    ]),
-    createBook,
-);
+bookRouter.post('/', verifyJWT, isAdmin('admin'), uploadBookFiles, createBook);
 
 bookRouter.patch('/:slug', verifyJWT, isAdmin('admin'), updateBook);
 

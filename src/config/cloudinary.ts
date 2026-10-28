@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { config } from './config.js';
-import fs from 'node:fs';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 // Configuration
 const { cloudName, apiKey, apiSecret } = config.cloudinary;
@@ -15,18 +16,36 @@ cloudinary.config({
     api_secret: apiSecret,
 });
 
+type UploadResourceType = 'image' | 'raw';
+
 // Upload an image
-export const uploadOnCloudinary = async (filePath: string) => {
+export const uploadOnCloudinary = async (
+    filePath: string,
+    folder: string,
+    resourceType: UploadResourceType,
+) => {
     try {
-        if (!filePath) return null;
-        const response = await cloudinary.uploader.upload(filePath, {
-            resource_type: 'auto',
+        return await cloudinary.uploader.upload(filePath, {
+            folder,
+            resource_type: resourceType,
+            ...(resourceType === 'raw'
+                ? { public_id: path.basename(filePath) }
+                : {}),
         });
-        fs.unlinkSync(filePath); // Delete the local file after upload
-        return response; // Return the secure URL of the uploaded image
-    } catch (error) {
-        fs.unlinkSync(filePath); // Delete the local file in case of an error
-        console.error('Error uploading to Cloudinary:', error);
-        throw error;
+    } finally {
+        await fs.unlink(filePath).catch((error: NodeJS.ErrnoException) => {
+            if (error.code !== 'ENOENT') {
+                console.error('Temporary file cleanup failed:', error);
+            }
+        });
     }
+};
+
+export const cloudinaryDestroy = async (
+    publicId: string,
+    resourceType: 'image' | 'raw',
+) => {
+    return cloudinary.uploader.destroy(publicId, {
+        resource_type: resourceType,
+    });
 };

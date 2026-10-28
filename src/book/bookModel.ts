@@ -31,12 +31,24 @@ const bookSchema = new mongoose.Schema<Book>(
             required: [true, 'Description is required'],
         },
         coverImage: {
-            type: String,
-            required: [true, 'Cover image is required'],
+            url: {
+                type: String,
+                required: [true, 'Cover image URL is required'],
+            },
+            publicId: {
+                type: String,
+                required: [true, 'Cover image public ID is required'],
+            },
         },
         file: {
-            type: String,
-            required: [true, 'File is required'],
+            url: {
+                type: String,
+                required: [true, 'File URL is required'],
+            },
+            publicId: {
+                type: String,
+                required: [true, 'File public ID is required'],
+            },
         },
         price: {
             type: Number,

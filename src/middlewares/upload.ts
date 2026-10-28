@@ -1,31 +1,49 @@
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 
-const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
-const destination = path.resolve(currentDirectory, '../../public/data/uploads');
+const uploadDir = path.resolve(process.cwd(), 'public/data/uploads');
 
-if (!fs.existsSync(destination)) {
-    fs.mkdirSync(destination, { recursive: true });
-}
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, destination);
+    destination: (_req, _file, callback) => {
+        callback(null, uploadDir);
     },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    filename: (_req, file, callback) => {
+        const uniqueName =
+            `${Date.now()}-${randomUUID()}` +
+            path.extname(file.originalname).toLowerCase();
 
-        const fileExt = path.extname(file.originalname);
-
-        cb(null, `${file.fieldname}-${uniqueSuffix}${fileExt}`);
+        callback(null, uniqueName);
     },
 });
 
-export const upload = multer({
-    storage: storage,
+export const uploadBookFiles = multer({
+    storage,
     limits: {
-        fileSize: 30 * 1024 * 1024, // 30 MB security limit
+        files: 2,
+        fileSize: 20 * 1024 * 1024,
     },
-});
+    fileFilter: (_req, file, callback) => {
+        const isCover = file.fieldname === 'coverImage';
+        const isPdf = file.fieldname === 'file';
+
+        if (
+            isCover &&
+            ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
+        ) {
+            return callback(null, true);
+        }
+
+        if (isPdf && file.mimetype === 'application/pdf') {
+            return callback(null, true);
+        }
+
+        callback(new Error('Invalid file type for the requested field.'));
+    },
+}).fields([
+    { name: 'coverImage', maxCount: 1 },
+    { name: 'file', maxCount: 1 },
+]);
