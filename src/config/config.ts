@@ -8,6 +8,11 @@ const _config = {
     env: process.env.NODE_ENV,
     accessTokenSecret: process.env.JWT_ACCESS_TOKEN_SECRET,
     refreshTokenSecret: process.env.JWT_REFRESH_TOKEN_SECRET,
+    cloudinary: {
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        apiKey: process.env.CLOUDINARY_API_KEY,
+        apiSecret: process.env.CLOUDINARY_API_SECRET,
+    },
 };
 
 export const config = Object.freeze(_config);
