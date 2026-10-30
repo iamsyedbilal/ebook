@@ -2,50 +2,33 @@ import type { NextFunction, Request, Response } from 'express';
 import asyncHandler from '../utils/asyncHandler.js';
 import bookModel from './bookModel.js';
 import createHttpError from 'http-errors';
-import { cloudinaryDestroy, uploadOnCloudinary } from '../config/cloudinary.js';
+import slugify from 'slugify'; // Assuming you use slugify for generating slugs
+import { processBookFiles } from './bookAssets.js';
+import { deleteFromCloudinary } from '../config/cloudinary.js';
 
 /*
     GET ALL BOOKS
 */
-const getAllBooks = asyncHandler(
-    async (req: Request, res: Response, next: NextFunction) => {
-        const requestedPage = Number(req.query.page ?? 1);
-        const requestedLimit = Number(req.query.limit ?? 10);
+const getAllBooks = asyncHandler(async (req: Request, res: Response) => {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 10));
 
-        const page =
-            Number.isInteger(requestedPage) && requestedPage > 0
-                ? requestedPage
-                : 1;
+    const [books, totalBooks] = await Promise.all([
+        bookModel
+            .find()
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit),
+        bookModel.countDocuments(),
+    ]);
 
-        const limit =
-            Number.isInteger(requestedLimit) && requestedLimit > 0
-                ? Math.min(requestedLimit, 100)
-                : 10;
-
-        const skip = (page - 1) * limit;
-
-        const [books, totalBooks] = await Promise.all([
-            bookModel
-                .find()
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            bookModel.countDocuments(),
-        ]);
-
-        const totalPages = Math.ceil(totalBooks / limit);
-
-        res.status(200).json({
-            books,
-            totalBooks,
-            totalPages,
-            currentPage: page,
-            hasNextPage: page < totalPages,
-            hasPrevPage: page > 1,
-        });
-    },
-);
+    res.status(200).json({
+        books,
+        totalBooks,
+        totalPages: Math.ceil(totalBooks / limit),
+        currentPage: page,
+    });
+});
 
 /*
     GET BOOK BY SLUG
@@ -81,109 +64,53 @@ const getBookBySlug = asyncHandler(
 // CREATE BOOK
 const createBook = asyncHandler(
     async (req: Request, res: Response, next: NextFunction) => {
-        const { title, slug, author, genre, description, price } = req.body;
+        const { title, author, genre, description, price } = req.body;
 
-        if (!title || !slug || !author || !genre || !description) {
+        if (!title || !author || !genre || !description) {
+            return next(createHttpError(400, 'All text fields are required.'));
+        }
+
+        // Generate a clean slug
+        const slug = slugify.default(title, { lower: true, strict: true });
+
+        const existingBook = await bookModel.findOne({ slug });
+
+        if (existingBook) {
             return next(
                 createHttpError(
                     400,
-                    'Missing required fields: title, slug, author, genre, description.',
+                    'A book with a similar title already exists.',
                 ),
             );
         }
 
-        const files = req.files as
+        // Use the custom file orchestrator service
+        const multerFiles = req.files as
             | { [fieldname: string]: Express.Multer.File[] }
             | undefined;
+        const uploadedAssets = await processBookFiles(multerFiles, false);
 
-        const coverImage = files?.coverImage?.[0];
-        const pdfFile = files?.file?.[0];
-
-        if (!coverImage) {
-            return next(createHttpError(400, 'Cover image is required.'));
+        if (!uploadedAssets.coverImage || !uploadedAssets.file) {
+            throw createHttpError(500, 'Book files could not be uploaded.');
         }
 
-        if (!pdfFile) {
-            return next(createHttpError(400, 'Book PDF is required.'));
-        }
+        // Save to Database
+        const newBook = await bookModel.create({
+            title,
+            slug,
+            author,
+            genre,
+            description,
+            price: price || 0,
+            coverImage: uploadedAssets.coverImage,
+            file: uploadedAssets.file,
+            createdBy: req.user?._id,
+        });
 
-        // Basic MIME-type checks; validate actual file contents too.
-        if (!coverImage.mimetype.startsWith('image/')) {
-            return next(createHttpError(400, 'Cover must be an image.'));
-        }
-
-        if (pdfFile.mimetype !== 'application/pdf') {
-            return next(createHttpError(400, 'Book file must be a PDF.'));
-        }
-
-        let uploadedCover:
-            | Awaited<ReturnType<typeof uploadOnCloudinary>>
-            | undefined;
-
-        let uploadedPdf:
-            | Awaited<ReturnType<typeof uploadOnCloudinary>>
-            | undefined;
-
-        try {
-            // Upload cover image
-            uploadedCover = await uploadOnCloudinary(
-                coverImage.path,
-                'books-cover',
-                'image',
-            );
-
-            // Upload PDF
-            uploadedPdf = await uploadOnCloudinary(
-                pdfFile.path,
-                'books-pdf',
-                'raw',
-            );
-
-            // Save book details in MongoDB
-            const book = await bookModel.create({
-                title,
-                slug,
-                author,
-                genre,
-                description,
-                price,
-
-                coverImage: {
-                    url: uploadedCover.secure_url,
-                    publicId: uploadedCover.public_id,
-                },
-
-                file: {
-                    url: uploadedPdf.secure_url,
-                    publicId: uploadedPdf.public_id,
-                },
-                createdBy: req.user._id,
-            });
-
-            return res.status(201).json({
-                message: 'Book created successfully.',
-                book,
-            });
-        } catch (error) {
-            // Prevent orphaned Cloudinary assets if saving fails.
-            const cleanupTasks = [];
-
-            if (uploadedCover) {
-                cleanupTasks.push(
-                    cloudinaryDestroy(uploadedCover.public_id, 'image'),
-                );
-            }
-
-            if (uploadedPdf) {
-                cleanupTasks.push(
-                    cloudinaryDestroy(uploadedPdf.public_id, 'raw'),
-                );
-            }
-
-            await Promise.allSettled(cleanupTasks);
-
-            throw error;
-        }
+        res.status(201).json({
+            message: 'Book created successfully!',
+            book: newBook,
+        });
     },
 );
 
@@ -191,14 +118,89 @@ const createBook = asyncHandler(
     UPDATE BOOK
 */
 const updateBook = asyncHandler(
-    async (req: Request, res: Response, next: NextFunction) => {},
+    async (req: Request, res: Response, next: NextFunction) => {
+        const slug = req.params.slug;
+
+        if (typeof slug !== 'string' || !slug.trim()) {
+            return next(createHttpError(400, 'Invalid book slug.'));
+        }
+
+        const { title, author, genre, description, price } = req.body;
+
+        const book = await bookModel.findOne({ slug });
+        if (!book) {
+            return next(createHttpError(404, 'Book not found.'));
+        }
+
+        const updateData: any = { author, genre, description, price };
+
+        // If the title changes, compile a brand new slug
+        if (title && title !== book.title) {
+            updateData.title = title;
+            updateData.slug = slugify.default(title, {
+                lower: true,
+                strict: true,
+            });
+        }
+
+        // Use the custom helper (isUpdate = true)
+        const multerFiles = req.files as
+            | { [fieldname: string]: Express.Multer.File[] }
+            | undefined;
+        const uploadedAssets = await processBookFiles(multerFiles, true);
+
+        // If a new cover image came in, save it and scrub old one out from Cloudinary
+        if (uploadedAssets.coverImage) {
+            await deleteFromCloudinary(book.coverImage.publicId, 'image');
+            updateData.coverImage = uploadedAssets.coverImage;
+        }
+
+        // If a new PDF file came in, save it and scrub old one out from Cloudinary
+        if (uploadedAssets.file) {
+            await deleteFromCloudinary(book.file.publicId, 'raw'); // "image" or "raw" depending on setup
+            updateData.file = uploadedAssets.file;
+        }
+
+        const updatedBook = await bookModel.findOneAndUpdate(
+            { slug },
+            { $set: updateData },
+            { new: true, runValidators: true },
+        );
+
+        res.status(200).json({
+            message: 'Book updated successfully!',
+            book: updatedBook,
+        });
+    },
 );
 
 /*
     DELETE BOOK
 */
 const deleteBook = asyncHandler(
-    async (req: Request, res: Response, next: NextFunction) => {},
+    async (req: Request, res: Response, next: NextFunction) => {
+        const slug = req.params.slug;
+
+        if (typeof slug !== 'string' || !slug.trim()) {
+            return next(createHttpError(400, 'Invalid book slug.'));
+        }
+
+        const book = await bookModel.findOne({ slug });
+        if (!book) {
+            return next(createHttpError(404, 'Book not found.'));
+        }
+
+        // Clean out Cloudinary storage assets immediately
+        await deleteFromCloudinary(book.coverImage.publicId, 'image');
+        await deleteFromCloudinary(book.file.publicId, 'image');
+
+        // Delete from database
+        await bookModel.deleteOne({ slug });
+
+        res.status(200).json({
+            message: 'Book and its associated files deleted successfully.',
+        });
+    },
 );
 
 export { getAllBooks, getBookBySlug, createBook, updateBook, deleteBook };

@@ -1,49 +1,67 @@
-import multer from 'multer';
+import multer, { type FileFilterCallback } from 'multer';
+import type { Request } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
-import { randomUUID } from 'node:crypto';
 
-const uploadDir = path.resolve(process.cwd(), 'public/data/uploads');
-
-fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure the local directory exists before saving files
+const uploadDir = './public/data/uploads';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
-    destination: (_req, _file, callback) => {
-        callback(null, uploadDir);
+    destination: function (
+        req: Request,
+        file: Express.Multer.File,
+        cb: (error: Error | null, destination: string) => void,
+    ) {
+        cb(null, uploadDir);
     },
-    filename: (_req, file, callback) => {
-        const uniqueName =
-            `${Date.now()}-${randomUUID()}` +
-            path.extname(file.originalname).toLowerCase();
-
-        callback(null, uniqueName);
+    filename: function (
+        req: Request,
+        file: Express.Multer.File,
+        cb: (error: Error | null, filename: string) => void,
+    ) {
+        // Create a unique filename to prevent overwriting files with identical names
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(
+            null,
+            file.fieldname +
+                '-' +
+                uniqueSuffix +
+                path.extname(file.originalname),
+        );
     },
 });
 
-export const uploadBookFiles = multer({
-    storage,
-    limits: {
-        files: 2,
-        fileSize: 20 * 1024 * 1024,
-    },
-    fileFilter: (_req, file, callback) => {
-        const isCover = file.fieldname === 'coverImage';
-        const isPdf = file.fieldname === 'file';
+// File Validation Filter
+const fileFilter = (
+    req: Request,
+    file: Express.Multer.File,
+    cb: FileFilterCallback,
+) => {
+    // Allowed mime types
+    const allowedMimeTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'application/pdf',
+    ];
 
-        if (
-            isCover &&
-            ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
-        ) {
-            return callback(null, true);
-        }
+    if (allowedMimeTypes.includes(file.mimetype)) {
+        cb(null, true); // Accept file
+    } else {
+        // Reject file with a clear error message
+        cb(
+            new Error(
+                'Invalid file type! Only Images (JPEG, PNG, WEBP) and PDFs are allowed.',
+            ),
+        );
+    }
+};
 
-        if (isPdf && file.mimetype === 'application/pdf') {
-            return callback(null, true);
-        }
-
-        callback(new Error('Invalid file type for the requested field.'));
-    },
-}).fields([
-    { name: 'coverImage', maxCount: 1 },
-    { name: 'file', maxCount: 1 },
-]);
+export const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 }, // Optional: Limit file size to 5MB
+});

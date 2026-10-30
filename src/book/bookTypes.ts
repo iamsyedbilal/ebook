@@ -1,4 +1,4 @@
-import type mongoose from 'mongoose';
+import type { Types } from 'mongoose';
 
 export interface BookAsset {
     url: string;
@@ -8,15 +8,13 @@ export interface BookAsset {
 export interface Book {
     title: string;
     slug: string;
-    description: string;
     author: string;
     genre: string;
+    description: string;
     coverImage: BookAsset;
     file: BookAsset;
     price: number;
-    createdBy:
-        | mongoose.Types.ObjectId
-        | { _id: string; name: string; email: string };
+    createdBy: Types.ObjectId;
     createdAt?: Date;
     updatedAt?: Date;
 }

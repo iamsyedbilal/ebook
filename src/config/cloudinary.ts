@@ -1,7 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { config } from './config.js';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import fs from 'fs';
 
 // Configuration
 const { cloudName, apiKey, apiSecret } = config.cloudinary;
@@ -16,36 +15,59 @@ cloudinary.config({
     api_secret: apiSecret,
 });
 
-type UploadResourceType = 'image' | 'raw';
+export type ResourceType = 'image' | 'raw';
 
-// Upload an image
+/**
+ * Uploads a local file (Image, PDF, etc.) to Cloudinary
+ * @param {string} localFilePath - The temporary local path of the file (e.g., from Multer)
+ * @returns {object|null} - The Cloudinary response object or null if failed
+ */
 export const uploadOnCloudinary = async (
-    filePath: string,
-    folder: string,
-    resourceType: UploadResourceType,
+    localFilePath: string,
+    resourceType: ResourceType,
 ) => {
     try {
-        return await cloudinary.uploader.upload(filePath, {
-            folder,
+        if (!localFilePath) return null;
+
+        const response = await cloudinary.uploader.upload(localFilePath, {
+            folder: 'books_assets',
             resource_type: resourceType,
-            ...(resourceType === 'raw'
-                ? { public_id: path.basename(filePath) }
-                : {}),
         });
-    } finally {
-        await fs.unlink(filePath).catch((error: NodeJS.ErrnoException) => {
-            if (error.code !== 'ENOENT') {
-                console.error('Temporary file cleanup failed:', error);
-            }
-        });
+
+        // SUCCESS: Remove the local temporary file from public/data/upload
+        if (fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
+        return response;
+    } catch (error) {
+        if (fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
+
+        console.error('Cloudinary upload failed:', error);
+        return null;
     }
 };
 
-export const cloudinaryDestroy = async (
+/**
+ * Deletes a file from Cloudinary using its public ID
+ * @param {string} publicId - The unique Cloudinary public ID of the asset
+ * @param {string} [resourceType="image"] - The type of resource ('image', 'raw', 'video')
+ * @returns {object|null} - The Cloudinary response object or null if failed
+ */
+export const deleteFromCloudinary = async (
     publicId: string,
-    resourceType: 'image' | 'raw',
+    resourceType: ResourceType,
 ) => {
-    return cloudinary.uploader.destroy(publicId, {
-        resource_type: resourceType,
-    });
+    try {
+        if (!publicId) return null;
+
+        // Delete the asset from Cloudinary
+        const response = await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType,
+        });
+
+        return response;
+    } catch (error) {
+        console.error('Cloudinary deletion failed:', error);
+        return null;
+    }
 };

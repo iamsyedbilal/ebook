@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { type Model } from 'mongoose';
 import type { Book } from './bookTypes.js';
 
 const bookSchema = new mongoose.Schema<Book>(
@@ -14,6 +14,7 @@ const bookSchema = new mongoose.Schema<Book>(
             unique: true,
             lowercase: true,
             trim: true,
+            required: [true, 'Slug is required'],
         },
         author: {
             type: String,
@@ -73,9 +74,8 @@ bookSchema.index({
     author: 'text',
     genre: 'text',
     description: 'text',
-    createdBy: 'text',
 });
 
-const bookModel = mongoose.model<Book>('Book', bookSchema);
+const bookModel: Model<Book> = mongoose.model<Book>('Book', bookSchema);
 
 export default bookModel;
