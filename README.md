@@ -31,7 +31,7 @@ The project currently provides user authentication and book catalogue management
 
 ## Architecture
 
-The backend uses a **feature-based (module-based) structure**. Each domain owns its controller, service, routes, model, and types. Shared infrastructure stays outside the feature modules.
+The backend uses a **feature-based (module-based) structure**. Authentication and book workflows are grouped by domain; user persistence is kept in the users module. Shared infrastructure stays outside feature modules.
 
 ```text
 ebook/
@@ -40,12 +40,11 @@ ebook/
 │   │   ├── auth/
 │   │   │   ├── auth.controller.ts
 │   │   │   ├── auth.service.ts
-│   │   │   └── auth.routes.ts
-│   │   │
+│   │   │   ├── auth.routes.ts
+│   │   │   └── token.service.ts
 │   │   ├── users/
 │   │   │   ├── user.model.ts
 │   │   │   └── user.types.ts
-│   │   │
 │   │   └── books/
 │   │       ├── book.controller.ts
 │   │       ├── book.service.ts
@@ -53,26 +52,20 @@ ebook/
 │   │       ├── book.model.ts
 │   │       ├── book.routes.ts
 │   │       └── book.types.ts
-│   │
 │   ├── config/
 │   │   ├── cloudinary.ts
 │   │   ├── config.ts
 │   │   └── db.ts
-│   │
 │   ├── middlewares/
 │   │   ├── authorizeRoles.ts
 │   │   ├── globalErrorHandler.ts
 │   │   ├── upload.ts
 │   │   └── verifyJWT.ts
-│   │
 │   ├── types/
 │   │   └── express.d.ts
-│   │
-│   └── utils/
-│       └── asyncHandler.ts
-│   │
+│   ├── utils/
+│   │   └── asyncHandler.ts
 │   └── app.ts
-│
 ├── server.ts
 ├── .env.example
 ├── .gitignore
@@ -207,7 +200,7 @@ Text fields for a book: `title`, `author`, `genre`, `description`, and optional 
 - Book slugs are generated from titles and must be unique.
 - A book stores Cloudinary `url` and `publicId` for both its cover image and PDF.
 - The `createdBy` field references the user who created the book.
-- Admin authorization is enforced in the book routes with `verifyJWT` followed by `isAdmin('admin')`.
+- Admin authorization is enforced in the book routes with `verifyJWT` followed by `authorizeRoles('admin')`.
 
 ## Current status and follow-up work
 
