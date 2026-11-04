@@ -29,7 +29,7 @@ export const registerUser = async (input: RegisterInput) => {
     }
 
     const password = await bcrypt.hash(input.password, 12);
-    const user = await UserModel.create({ name, email, password });
+    const user = await UserModel.create({ name, email, password, role: 'user' });
     const tokens = generateAuthTokens(user._id);
 
     return {
