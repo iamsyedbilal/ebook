@@ -1,73 +1,60 @@
 import jwt from 'jsonwebtoken';
-import { config } from '../config/config.js';
-import UserModel from '../user/userModel.js';
 import type { Request, Response, NextFunction } from 'express';
 import createHttpError from 'http-errors';
 import asyncHandler from '../utils/asyncHandler.js';
-
-declare global {
-    namespace Express {
-        interface Request {
-            user?: any;
-        }
-    }
-}
+import { config } from '../config/config.js';
+import UserModel from '../modules/users/user.model.js';
 
 const verifyJWT = asyncHandler(
-    async (req: Request, res: Response, next: NextFunction) => {
-        let token: string | undefined;
+    async (req: Request, _res: Response, next: NextFunction) => {
+        const authorization = req.headers.authorization;
+        const [scheme, token] = authorization?.split(' ') ?? [];
 
-        if (
-            req.headers.authorization &&
-            req.headers.authorization.startsWith('Bearer')
-        ) {
-            token = req.headers.authorization.split(' ')[1];
-        }
-
-        if (!token) {
-            return next(
-                createHttpError(
-                    401,
-                    'Authentication token missing. Please log in to gain access.',
-                ),
+        if (scheme !== 'Bearer' || !token) {
+            throw createHttpError(
+                401,
+                'Authentication token missing. Please log in.',
             );
         }
+
+        let decoded: { userId: string };
 
         try {
-            const decoded = jwt.verify(
+            decoded = jwt.verify(
                 token,
                 config.accessTokenSecret as string,
+                { algorithms: ['HS256'] },
             ) as { userId: string };
-
-            const currentUser = await UserModel.findById(decoded.userId);
-
-            if (!currentUser) {
-                return next(
-                    createHttpError(
-                        401,
-                        'The account associated with this token no longer exists.',
-                    ),
-                );
-            }
-
-            req.user = currentUser;
-            next();
-        } catch (error: any) {
-            if (error.name === 'TokenExpiredError') {
-                return next(
-                    createHttpError(
-                        401,
-                        'Your access token has expired. Please refresh your session.',
-                    ),
-                );
-            }
-            return next(
-                createHttpError(
+        } catch (error) {
+            if (error instanceof jwt.TokenExpiredError) {
+                throw createHttpError(
                     401,
-                    'Invalid authentication token. Access denied.',
-                ),
+                    'Your access token has expired. Please refresh your session.',
+                );
+            }
+
+            throw createHttpError(401, 'Invalid authentication token.');
+        }
+
+        const currentUser = await UserModel.findById(decoded.userId).select(
+            '_id name email role',
+        );
+
+        if (!currentUser) {
+            throw createHttpError(
+                401,
+                'The account associated with this token no longer exists.',
             );
         }
+
+        req.user = {
+            _id: currentUser._id,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role,
+        };
+
+        next();
     },
 );
 

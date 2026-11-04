@@ -6,6 +6,7 @@ export interface BookAsset {
 }
 
 export interface Book {
+    _id: Types.ObjectId;
     title: string;
     slug: string;
     author: string;
@@ -17,4 +18,17 @@ export interface Book {
     createdBy: Types.ObjectId;
     createdAt?: Date;
     updatedAt?: Date;
+}
+
+export interface BookFiles {
+    coverImage?: Express.Multer.File;
+    file?: Express.Multer.File;
+}
+
+export interface BookInput {
+    title: string;
+    author: string;
+    genre: string;
+    description: string;
+    price?: number;
 }

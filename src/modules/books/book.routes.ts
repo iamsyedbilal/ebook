@@ -1,18 +1,18 @@
-import express from 'express';
+import { Router } from 'express';
 import {
+    createBook,
+    deleteBook,
     getAllBooks,
     getBookBySlug,
-    createBook,
     updateBook,
-    deleteBook,
-} from './bookController.js';
-const bookRouter = express.Router();
-import verifyJWT from '../middlewares/verifyJWT.js';
-import isAdmin from '../middlewares/isAdmin.js';
-import { upload } from '../middlewares/upload.js';
+} from './book.controller.js';
+import verifyJWT from '../../middlewares/verifyJWT.js';
+import isAdmin from '../../middlewares/authorizeRoles.js';
+import { upload } from '../../middlewares/upload.js';
+
+const bookRouter = Router();
 
 bookRouter.get('/', getAllBooks);
-
 bookRouter.get('/:slug', verifyJWT, getBookBySlug);
 
 bookRouter.post(

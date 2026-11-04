@@ -1,8 +1,12 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { RequestHandler } from 'express';
 
-const asyncHandler =
-    (fn: Function) => (req: Request, res: Response, next: NextFunction) => {
-        Promise.resolve(fn(req, res, next)).catch(next);
+/**
+ * Forwards rejected async route-handler promises to Express error middleware.
+ */
+const asyncHandler = (handler: RequestHandler): RequestHandler => {
+    return (req, res, next) => {
+        Promise.resolve(handler(req, res, next)).catch(next);
     };
+};
 
 export default asyncHandler;

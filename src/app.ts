@@ -1,9 +1,7 @@
-import express, {
-    type NextFunction,
-    type Request,
-    type Response,
-} from 'express';
+import express, { type Request, type Response } from 'express';
 import cookieParser from 'cookie-parser';
+import authRouter from './modules/auth/auth.routes.js';
+import bookRouter from './modules/books/book.routes.js';
 import globalErrorHandler from './middlewares/globalErrorHandler.js';
 
 const app = express();
@@ -11,19 +9,20 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
-app.use(express.static('public'));
 
-// Routes
-
-// Http methods GET,POST,PUT,PATCH,DELETE
-app.get('/', function (req: Request, res: Response, next: NextFunction) {
-    res.json({ message: 'Welcome to ebook api' });
+// Health check
+app.get('/', (_req: Request, res: Response) => {
+    res.status(200).json({
+        success: true,
+        message: 'Welcome to the ebook API.',
+    });
 });
 
-app.use('/api/v1/users', (await import('./user/userRouter.js')).default);
-app.use('/api/v1/books', (await import('./book/bookRouter.js')).default);
+// API routes
+app.use('/api/v1/users', authRouter);
+app.use('/api/v1/books', bookRouter);
 
-// global error handler
+// Keep the error handler after all routes and middleware.
 app.use(globalErrorHandler);
 
 export default app;

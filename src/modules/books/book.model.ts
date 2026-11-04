@@ -1,5 +1,5 @@
 import mongoose, { type Model } from 'mongoose';
-import type { Book } from './bookTypes.js';
+import type { Book } from './book.types.js';
 
 const bookSchema = new mongoose.Schema<Book>(
     {
@@ -30,26 +30,15 @@ const bookSchema = new mongoose.Schema<Book>(
         description: {
             type: String,
             required: [true, 'Description is required'],
+            trim: true,
         },
         coverImage: {
-            url: {
-                type: String,
-                required: [true, 'Cover image URL is required'],
-            },
-            publicId: {
-                type: String,
-                required: [true, 'Cover image public ID is required'],
-            },
+            url: { type: String, required: [true, 'Cover image URL is required'] },
+            publicId: { type: String, required: [true, 'Cover image public ID is required'] },
         },
         file: {
-            url: {
-                type: String,
-                required: [true, 'File URL is required'],
-            },
-            publicId: {
-                type: String,
-                required: [true, 'File public ID is required'],
-            },
+            url: { type: String, required: [true, 'File URL is required'] },
+            publicId: { type: String, required: [true, 'File public ID is required'] },
         },
         price: {
             type: Number,
@@ -64,18 +53,11 @@ const bookSchema = new mongoose.Schema<Book>(
             index: true,
         },
     },
-    {
-        timestamps: true,
-    },
+    { timestamps: true },
 );
 
-bookSchema.index({
-    title: 'text',
-    author: 'text',
-    genre: 'text',
-    description: 'text',
-});
+bookSchema.index({ title: 'text', author: 'text', genre: 'text', description: 'text' });
 
-const bookModel: Model<Book> = mongoose.model<Book>('Book', bookSchema);
+const BookModel: Model<Book> = mongoose.model<Book>('Book', bookSchema);
 
-export default bookModel;
+export default BookModel;

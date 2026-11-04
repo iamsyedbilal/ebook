@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import type { Types } from 'mongoose';
-import { config } from '../config/config.js';
+import { config } from '../../config/config.js';
 
 interface Tokens {
     accessToken: string;
@@ -8,20 +8,19 @@ interface Tokens {
 }
 
 /**
- * Generates both short-lived Access Tokens and long-lived Refresh Tokens for a user
- * @param userId - The MongoDB ObjectId string of the user
+ * Creates short-lived access and long-lived refresh tokens for a user.
  */
 export const generateAuthTokens = (userId: string | Types.ObjectId): Tokens => {
-    // 1. Short-lived Access Token (15m)
+    const subject = userId.toString();
+
     const accessToken = jwt.sign(
-        { userId: userId.toString() },
+        { userId: subject },
         config.accessTokenSecret as string,
         { expiresIn: '15m', algorithm: 'HS256' },
     );
 
-    // 2. Long-lived Refresh Token (7d)
     const refreshToken = jwt.sign(
-        { userId: userId.toString() },
+        { userId: subject },
         config.refreshTokenSecret as string,
         { expiresIn: '7d', algorithm: 'HS256' },
     );

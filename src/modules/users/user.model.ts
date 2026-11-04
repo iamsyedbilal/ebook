@@ -1,20 +1,22 @@
-import mongoose from 'mongoose';
-import type { User } from './userTypes.js';
+import mongoose, { type Model } from 'mongoose';
+import type { User } from './user.types.js';
 
 const userSchema = new mongoose.Schema<User>(
     {
         name: {
             type: String,
             required: [true, 'Name is required'],
+            trim: true,
         },
         email: {
             type: String,
             required: [true, 'Email is required'],
             unique: true,
             lowercase: true,
+            trim: true,
             validate: {
                 validator: (value: string) =>
-                    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+                    /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value),
                 message: 'Please provide a valid email address',
             },
         },
@@ -29,11 +31,9 @@ const userSchema = new mongoose.Schema<User>(
             default: 'user',
         },
     },
-    {
-        timestamps: true,
-    },
+    { timestamps: true },
 );
 
-const userModel = mongoose.model<User>('User', userSchema);
+const UserModel: Model<User> = mongoose.model<User>('User', userSchema);
 
-export default userModel;
+export default UserModel;
