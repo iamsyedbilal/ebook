@@ -7,7 +7,7 @@ import {
     updateBook,
 } from './book.controller.js';
 import verifyJWT from '../../middlewares/verifyJWT.js';
-import isAdmin from '../../middlewares/isAdmin.js';
+import isAdmin from '../../middlewares/authorizeRoles.js';
 import { upload } from '../../middlewares/upload.js';
 
 const bookRouter = Router();
