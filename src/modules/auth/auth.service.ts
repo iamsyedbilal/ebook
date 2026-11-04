@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import createHttpError from 'http-errors';
 import UserModel from '../users/user.model.js';
 import { config } from '../../config/config.js';
-import { generateAuthTokens } from '../../utils/tokenService.js';
+import { generateAuthTokens } from './token.service.js';
 
 interface RegisterInput {
     name: string;
