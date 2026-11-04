@@ -60,17 +60,16 @@ ebook/
 │   │   └── db.ts
 │   │
 │   ├── middlewares/
+│   │   ├── authorizeRoles.ts
 │   │   ├── globalErrorHandler.ts
-│   │   ├── isAdmin.ts
 │   │   ├── upload.ts
 │   │   └── verifyJWT.ts
 │   │
 │   ├── types/
 │   │   └── express.d.ts
 │   │
-│   ├── utils/
-│   │   ├── asyncHandler.ts
-│   │   └── tokenService.ts
+│   └── utils/
+│       └── asyncHandler.ts
 │   │
 │   └── app.ts
 │
