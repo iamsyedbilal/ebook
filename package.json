@@ -1,31 +1,24 @@
 {
     "name": "ebook",
     "version": "1.0.0",
-    "description": "This is ebook api project",
-    "keywords": [
-        "rest",
-        "api",
-        "express",
-        "node"
-    ],
-    "author": "syed bilal",
+    "private": true,
+    "description": "An ebook library REST API built with Express, TypeScript, MongoDB, and Cloudinary.",
     "type": "module",
-    "main": "index.js",
+    "main": "dist/server.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1",
-        "dev": "tsx watch server.ts"
+        "dev": "tsx watch server.ts",
+        "build": "tsc -p tsconfig.json",
+        "start": "node dist/server.js",
+        "typecheck": "tsc --noEmit -p tsconfig.json"
     },
     "devDependencies": {
         "@types/bcrypt": "^6.0.0",
         "@types/cookie-parser": "^1.4.10",
-        "@types/dotenv": "^6.1.1",
         "@types/express": "^5.0.6",
         "@types/http-errors": "^2.0.5",
         "@types/jsonwebtoken": "^9.0.10",
-        "@types/mongoose": "^5.11.96",
         "@types/multer": "^2.3.0",
         "@types/node": "^26.6.5",
-        "ts-node": "^10.9.2",
         "tsx": "^4.23.15",
         "typescript": "^7.0.2"
     },
