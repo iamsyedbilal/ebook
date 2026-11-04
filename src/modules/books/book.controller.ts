@@ -22,7 +22,10 @@ const parsePage = (value: unknown, fallback: number): number => {
     if (value === undefined) return fallback;
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 1) {
-        throw createHttpError(400, 'Pagination values must be positive integers.');
+        throw createHttpError(
+            400,
+            'Pagination values must be positive integers.',
+        );
     }
     return parsed;
 };
@@ -34,13 +37,17 @@ export const getAllBooks = asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(result);
 });
 
-export const getBookBySlug = asyncHandler(async (req: Request, res: Response) => {
-    const slug = req.params.slug;
-    if (!slug) throw createHttpError(400, 'A book slug is required.');
+export const getBookBySlug = asyncHandler(
+    async (req: Request, res: Response) => {
+        const slug = req.params.slug;
+        if (typeof slug !== 'string' || !slug) {
+            throw createHttpError(400, 'A book slug is required.');
+        }
 
-    const book = await bookService.getBookBySlug(slug);
-    res.status(200).json(book);
-});
+        const book = await bookService.getBookBySlug(slug);
+        res.status(200).json(book);
+    },
+);
 
 export const createBook = asyncHandler(async (req: Request, res: Response) => {
     const book = await bookService.createBook(
@@ -57,7 +64,9 @@ export const createBook = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateBook = asyncHandler(async (req: Request, res: Response) => {
     const slug = req.params.slug;
-    if (!slug) throw createHttpError(400, 'A book slug is required.');
+    if (typeof slug !== 'string' || !slug) {
+        throw createHttpError(400, 'A book slug is required.');
+    }
 
     const book = await bookService.updateBook(
         slug,
@@ -73,7 +82,9 @@ export const updateBook = asyncHandler(async (req: Request, res: Response) => {
 
 export const deleteBook = asyncHandler(async (req: Request, res: Response) => {
     const slug = req.params.slug;
-    if (!slug) throw createHttpError(400, 'A book slug is required.');
+    if (typeof slug !== 'string' || !slug) {
+        throw createHttpError(400, 'A book slug is required.');
+    }
 
     await bookService.deleteBook(slug);
     res.status(200).json({
