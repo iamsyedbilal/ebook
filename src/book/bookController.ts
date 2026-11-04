@@ -5,6 +5,7 @@ import createHttpError from 'http-errors';
 import slugify from 'slugify'; // Assuming you use slugify for generating slugs
 import { processBookFiles } from './bookAssets.js';
 import { deleteFromCloudinary } from '../config/cloudinary.js';
+import type { Book } from './bookTypes.js';
 
 /*
     GET ALL BOOKS
@@ -88,7 +89,15 @@ const createBook = asyncHandler(
         const multerFiles = req.files as
             | { [fieldname: string]: Express.Multer.File[] }
             | undefined;
-        const uploadedAssets = await processBookFiles(multerFiles, false);
+
+        const uploadedAssets = await processBookFiles({
+            ...(multerFiles?.coverImage?.[0] && {
+                coverImage: multerFiles.coverImage[0],
+            }),
+            ...(multerFiles?.file?.[0] && {
+                file: multerFiles.file[0],
+            }),
+        });
 
         if (!uploadedAssets.coverImage || !uploadedAssets.file) {
             throw createHttpError(500, 'Book files could not be uploaded.');
@@ -128,26 +137,79 @@ const updateBook = asyncHandler(
         const { title, author, genre, description, price } = req.body;
 
         const book = await bookModel.findOne({ slug });
+
         if (!book) {
             return next(createHttpError(404, 'Book not found.'));
         }
 
-        const updateData: any = { author, genre, description, price };
+        const updateData: Partial<Book> = {};
 
         // If the title changes, compile a brand new slug
         if (title && title !== book.title) {
-            updateData.title = title;
-            updateData.slug = slugify.default(title, {
+            const newSlug = slugify.default(title.trim(), {
                 lower: true,
                 strict: true,
             });
+
+            const existingBook = await bookModel.findOne({
+                slug: newSlug,
+                _id: { $ne: book._id },
+            });
+
+            if (existingBook) {
+                return next(
+                    createHttpError(409, 'This book title already exists.'),
+                );
+            }
+
+            updateData.slug = newSlug;
         }
 
-        // Use the custom helper (isUpdate = true)
+        if (author !== undefined) {
+            if (typeof author !== 'string' || !author.trim()) {
+                return next(createHttpError(400, 'Invalid author.'));
+            }
+
+            updateData.author = author.trim();
+        }
+
+        if (genre !== undefined) {
+            if (typeof genre !== 'string' || !genre.trim()) {
+                return next(createHttpError(400, 'Invalid genre.'));
+            }
+
+            updateData.genre = genre.trim();
+        }
+
+        if (description !== undefined) {
+            if (typeof description !== 'string' || !description.trim()) {
+                return next(createHttpError(400, 'Invalid description.'));
+            }
+
+            updateData.description = description.trim();
+        }
+
+        if (price !== undefined) {
+            const bookPrice = Number(price);
+
+            if (!Number.isFinite(bookPrice) || bookPrice < 0) {
+                return next(createHttpError(400, 'Invalid book price.'));
+            }
+
+            updateData.price = bookPrice;
+        }
+
         const multerFiles = req.files as
             | { [fieldname: string]: Express.Multer.File[] }
             | undefined;
-        const uploadedAssets = await processBookFiles(multerFiles, true);
+
+        const uploadedAssets = await processBookFiles(
+            {
+                coverImage: multerFiles?.coverImage?.[0],
+                file: multerFiles?.file?.[0],
+            },
+            true,
+        );
 
         // If a new cover image came in, save it and scrub old one out from Cloudinary
         if (uploadedAssets.coverImage) {
