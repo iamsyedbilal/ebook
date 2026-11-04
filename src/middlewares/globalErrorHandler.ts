@@ -41,7 +41,7 @@ const globalErrorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
             : message,
     };
 
-    if (config.env === 'development') {
+    if (config.env === 'development' && err.stack) {
         response.stack = err.stack;
     }
 
