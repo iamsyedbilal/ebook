@@ -29,6 +29,9 @@ const buildUpdateData = async (
 
         if (title !== book.title) {
             const slug = buildSlug(title);
+            if (!slug) {
+                throw createHttpError(400, 'Title cannot produce a valid URL slug.');
+            }
             const duplicate = await BookModel.exists({
                 slug,
                 _id: { $ne: book._id },
@@ -104,6 +107,11 @@ export const createBook = async (
     }
 
     const assets = await uploadBookAssets(files, true);
+
+    if (!assets.coverImage || !assets.file) {
+        await deleteBookAssets(assets);
+        throw createHttpError(502, 'Both book assets must be uploaded successfully.');
+    }
 
     try {
         return await BookModel.create({
