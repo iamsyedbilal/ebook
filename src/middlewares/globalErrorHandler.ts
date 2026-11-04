@@ -33,17 +33,14 @@ const globalErrorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     const response: {
         success: false;
         message: string;
-        stack?: string;
+        errorStack: string;
     } = {
         success: false,
         message: statusCode >= 500 && config.env === 'production'
             ? 'Internal server error.'
             : message,
+        errorStack: config.env === 'development' ? err.stack ?? '' : '',
     };
-
-    if (config.env === 'development' && err.stack) {
-        response.stack = err.stack;
-    }
 
     res.status(statusCode).json(response);
 };
