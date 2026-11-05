@@ -36,7 +36,9 @@ export const getAllBooks = asyncHandler(async (req: Request, res: Response) => {
 
 export const getBookBySlug = asyncHandler(async (req: Request, res: Response) => {
     const slug = req.params.slug;
-    if (!slug) throw createHttpError(400, 'A book slug is required.');
+    if (typeof slug !== 'string' || !slug.trim()) {
+        throw createHttpError(400, 'A valid book slug is required.');
+    }
 
     const book = await bookService.getBookBySlug(slug);
     res.status(200).json(book);
@@ -57,7 +59,9 @@ export const createBook = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateBook = asyncHandler(async (req: Request, res: Response) => {
     const slug = req.params.slug;
-    if (!slug) throw createHttpError(400, 'A book slug is required.');
+    if (typeof slug !== 'string' || !slug.trim()) {
+        throw createHttpError(400, 'A valid book slug is required.');
+    }
 
     const book = await bookService.updateBook(
         slug,
@@ -73,7 +77,9 @@ export const updateBook = asyncHandler(async (req: Request, res: Response) => {
 
 export const deleteBook = asyncHandler(async (req: Request, res: Response) => {
     const slug = req.params.slug;
-    if (!slug) throw createHttpError(400, 'A book slug is required.');
+    if (typeof slug !== 'string' || !slug.trim()) {
+        throw createHttpError(400, 'A valid book slug is required.');
+    }
 
     await bookService.deleteBook(slug);
     res.status(200).json({
